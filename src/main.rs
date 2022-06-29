@@ -1,11 +1,12 @@
 use rltk::{GameState, Rltk, RGB};
 use specs::{prelude::*, World};
-use specs_derive::Component;
 use std::cmp::{max, min};
 mod components;
 use components::*;
 mod input;
 use input::*;
+mod map;
+use map::*;
 
 pub struct State {
     pub ecs: World,
@@ -26,6 +27,9 @@ impl GameState for State {
         player_input(self, ctx);
         self.run_systems();
 
+        let map = self.ecs.fetch::<Vec<TileType>>();
+        draw_map(&map, ctx);
+
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
 
@@ -43,7 +47,7 @@ impl<'a> System<'a> for LeftWalker {
         for (_lefty, pos) in (&lefty, &mut pos).join() {
             pos.x -= 1;
             if pos.x < 0 {
-                pos.x = 79;
+                pos.x = MAP_WIDTH - 1;
             }
         }
     }
@@ -54,7 +58,7 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut players = ecs.write_storage::<Player>();
 
     for (_, pos) in (&mut players, &mut positions).join() {
-        pos.x = min(79, max(0, pos.x + delta_x));
+        pos.x = min(MAP_WIDTH - 1, max(0, pos.x + delta_x));
         pos.y = min(49, max(0, pos.y + delta_y));
     }
 }
@@ -68,6 +72,8 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<LeftMover>();
     gs.ecs.register::<Player>();
+
+    gs.ecs.insert(new_map());
 
     gs.ecs
         .create_entity()
