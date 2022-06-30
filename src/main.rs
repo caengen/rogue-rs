@@ -7,6 +7,7 @@ mod input;
 use input::*;
 mod map;
 use map::*;
+mod rect;
 
 pub struct State {
     pub ecs: World,
@@ -14,8 +15,8 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut lw = LeftWalker {};
-        lw.run_now(&self.ecs);
+        // let mut lw = LeftWalker {};
+        // lw.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -56,10 +57,15 @@ impl<'a> System<'a> for LeftWalker {
 fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
     let mut players = ecs.write_storage::<Player>();
+    let map = ecs.fetch::<Vec<TileType>>();
 
     for (_, pos) in (&mut players, &mut positions).join() {
-        pos.x = min(MAP_WIDTH - 1, max(0, pos.x + delta_x));
-        pos.y = min(49, max(0, pos.y + delta_y));
+        let dest_idx = xy_idx(pos.x + delta_x, pos.y + delta_y);
+
+        if map[dest_idx] != TileType::Wall {
+            pos.x = min(MAP_WIDTH - 1, max(0, pos.x + delta_x));
+            pos.y = min(49, max(0, pos.y + delta_y));
+        }
     }
 }
 
@@ -73,7 +79,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<LeftMover>();
     gs.ecs.register::<Player>();
 
-    gs.ecs.insert(new_map());
+    gs.ecs.insert(new_map_rooms_and_corridors());
 
     gs.ecs
         .create_entity()
@@ -86,18 +92,17 @@ fn main() -> rltk::BError {
         .with(Player {})
         .build();
 
-    for i in 0..10 {
-        gs.ecs
-            .create_entity()
-            .with(Position { x: i * 7, y: 20 })
-            .with(Renderable {
-                glyph: rltk::to_cp437('☺'),
-                fg: RGB::named(rltk::RED),
-                bg: RGB::named(rltk::BLACK),
-            })
-            .with(LeftMover {})
-            .build();
-    }
+    // for i in 0..10 {
+    //     gs.ecs
+    //         .create_entity()
+    //         .with(Position { x: i * 7, y: 20 })
+    //         .with(Renderable {
+    //             glyph: rltk::to_cp437('☺'),
+    //             fg: RGB::named(rltk::RED),
+    //             bg: RGB::named(rltk::BLACK),
+    //         })
+    //         .build();
+    // }
 
     rltk::main_loop(context, gs)
 }

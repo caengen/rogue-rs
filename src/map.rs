@@ -1,6 +1,8 @@
+use crate::rect::*;
 use rltk::{Console, RandomNumberGenerator, Rltk, Tile, RGB};
 use specs::prelude::*;
 use specs_derive::Component;
+use std::cmp::{max, min};
 
 pub const MAP_WIDTH: i32 = 80;
 pub const MAP_HEIGHT: i32 = 50;
@@ -15,7 +17,7 @@ pub fn xy_idx(x: i32, y: i32) -> usize {
     (y * MAP_WIDTH) as usize + x as usize
 }
 
-pub fn new_map() -> Vec<TileType> {
+pub fn new_map_test() -> Vec<TileType> {
     let mut map = vec![TileType::Floor; (MAP_WIDTH * MAP_HEIGHT) as usize];
 
     for x in 0..MAP_WIDTH {
@@ -38,6 +40,59 @@ pub fn new_map() -> Vec<TileType> {
 
         if idx != player_start_pos {
             map[idx] = TileType::Wall;
+        }
+    }
+
+    map
+}
+
+fn apply_room_to_map(room: &Rect, map: &mut [TileType]) {
+    for y in room.y1 + 1..=room.y2 {
+        for x in room.x1 + 1..=room.x2 {
+            map[xy_idx(x, y)] = TileType::Floor;
+        }
+    }
+}
+
+fn apply_horizontal_tunnel(map: &mut [TileType], x1: i32, x2: i32, y: i32) {
+    for x in min(x1, x2)..=max(x1, x2) {
+        let idx = xy_idx(x, y);
+        map[idx] = TileType::Floor;
+    }
+}
+
+fn apply_vertical_tunnel(map: &mut [TileType], y1: i32, y2: i32, x: i32) {
+    for y in min(y1, y2)..=max(y1, y2) {
+        let idx = xy_idx(x, y);
+        map[idx] = TileType::Floor;
+    }
+}
+
+pub fn new_map_rooms_and_corridors() -> Vec<TileType> {
+    let mut map = vec![TileType::Wall; (MAP_WIDTH * MAP_HEIGHT) as usize];
+
+    let mut rooms: Vec<Rect> = Vec::new();
+    const MAX_ROOMS: i32 = 30;
+    const MAX_SIZE: i32 = 10;
+    const MIN_SIZE: i32 = 6;
+
+    let mut rng = RandomNumberGenerator::new();
+
+    for _ in 0..MAX_ROOMS {
+        let w = rng.range(MIN_SIZE, MAX_SIZE);
+        let h = rng.range(MIN_SIZE, MAX_SIZE);
+        let x = rng.roll_dice(1, MAP_WIDTH - w - 1) - 1;
+        let y = rng.roll_dice(1, MAP_HEIGHT - h - 1) - 1;
+        let new_room = Rect::new(x, y, w, h);
+        let mut ok = true;
+        for other_room in rooms.iter() {
+            if new_room.intersects(other_room) {
+                ok = false;
+            }
+        }
+        if ok {
+            apply_room_to_map(&new_room, &mut map);
+            rooms.push(new_room);
         }
     }
 
