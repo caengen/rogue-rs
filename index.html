@@ -1,7 +1,7 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
     <title>Rogue</title>
     <style>
         html, body {
@@ -16,17 +16,16 @@
             height: 100%;
             width: 100%;
         }
-        canvas {
-            padding: 0px;
-            width: 800px;
-            height: 600px;
-            touch-action: manipulation;
-        }
     </style>
 </head>
 
 <body>
-    <script type="module"> import init from './bin/rogue-rs.js'; var res = await init(); res.start(); </script>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <script src="./bin/rogue-rs.js"></script>
+    <script>      window.addEventListener("load", async () => {
+      await wasm_bindgen("./myblob_bg.wasm");
+    });
+</script>
 </body>
 
 </html>
