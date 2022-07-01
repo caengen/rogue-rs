@@ -3,8 +3,8 @@ use specs::{prelude::*, World};
 use std::cmp::{max, min};
 mod components;
 use components::*;
-mod input;
-use input::*;
+mod player;
+use player::*;
 mod map;
 use map::*;
 mod rect;
@@ -28,7 +28,7 @@ impl GameState for State {
         player_input(self, ctx);
         self.run_systems();
 
-        let map = self.ecs.fetch::<Vec<TileType>>();
+        let map = self.ecs.fetch::<Map>();
         draw_map(&map, ctx);
 
         let positions = self.ecs.read_storage::<Position>();
@@ -54,21 +54,6 @@ impl<'a> System<'a> for LeftWalker {
     }
 }
 
-fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
-    let mut positions = ecs.write_storage::<Position>();
-    let mut players = ecs.write_storage::<Player>();
-    let map = ecs.fetch::<Vec<TileType>>();
-
-    for (_, pos) in (&mut players, &mut positions).join() {
-        let dest_idx = xy_idx(pos.x + delta_x, pos.y + delta_y);
-
-        if map[dest_idx] != TileType::Wall {
-            pos.x = min(MAP_WIDTH - 1, max(0, pos.x + delta_x));
-            pos.y = min(49, max(0, pos.y + delta_y));
-        }
-    }
-}
-
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let context = RltkBuilder::simple80x50().with_title("rogue-rs").build()?;
@@ -79,8 +64,8 @@ fn main() -> rltk::BError {
     gs.ecs.register::<LeftMover>();
     gs.ecs.register::<Player>();
 
-    let (rooms, map) = new_map_rooms_and_corridors();
-    let (player_x, player_y) = rooms[0].center();
+    let map: Map = Map::new_map_rooms_and_corridors();
+    let (player_x, player_y) = map.rooms[0].center();
 
     gs.ecs.insert(map);
 
