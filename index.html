@@ -5,26 +5,20 @@
     <title>Rogue</title>
     <style>
         html, body {
-            width: 100%;
-            height: 100%;
             background: black;
         }
         body {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100%;
-            width: 100%;
         }
     </style>
 </head>
 
 <body>
   <canvas id="canvas" width="640" height="480"></canvas>
-  <script src="./bin/rogue-rs.js"></script>
-    <script>      window.addEventListener("load", async () => {
-      await wasm_bindgen("./myblob_bg.wasm");
-    });
+    <script type="module">
+    import init from './bin/rogue-rs.js'; var res = await init(); res.start();
 </script>
 </body>
 
