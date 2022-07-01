@@ -1,7 +1,7 @@
-use crate::rect::*;
-use rltk::{Console, RandomNumberGenerator, Rltk, Tile, RGB};
-use specs::prelude::*;
-use specs_derive::Component;
+use super::{Player, Viewshed};
+use crate::rect::Rect;
+use rltk::{Algorithm2D, BaseMap, Point, RandomNumberGenerator, Rltk, Tile, RGB};
+use specs::{prelude::*, World};
 use std::cmp::{max, min};
 
 pub const MAP_WIDTH: i32 = 80;
@@ -20,6 +20,18 @@ pub struct Map {
     pub height: i32,
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
+}
+
+impl Algorithm2D for Map {
+    fn dimensions(&self) -> Point {
+        Point::new(self.width, self.height)
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx: usize) -> bool {
+        self.tiles[idx] == TileType::Wall
+    }
 }
 
 impl Map {
@@ -101,9 +113,10 @@ impl Map {
     }
 }
 
-pub fn draw_map(map: &Map, ctx: &mut Rltk) {
-    let mut x = 0;
-    let mut y = 0;
+pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
+    let mut viewsheds = ecs.write_storage::<Viewshed>();
+    let mut players = ecs.write_storage::<Player>();
+    let map = ecs.fetch::<Map>();
 
     let floor_fg = RGB::from_f32(0.5, 0.5, 0.5);
     let floor_bg = RGB::from_f32(0., 0., 0.);
@@ -112,20 +125,28 @@ pub fn draw_map(map: &Map, ctx: &mut Rltk) {
     let wall_bg = RGB::from_f32(0.5, 0.5, 0.5);
     let wall_glyph = rltk::to_cp437('#');
 
-    for tile in map.tiles.iter() {
-        match tile {
-            TileType::Floor => {
-                ctx.set(x, y, floor_fg, floor_bg, floor_glyph);
-            }
-            TileType::Wall => {
-                ctx.set(x, y, wall_fg, wall_bg, wall_glyph);
-            }
-        }
+    for (_player, viewshed) in (&mut players, &mut viewsheds).join() {
+        let mut y = 0;
+        let mut x = 0;
 
-        x += 1;
-        if x == MAP_WIDTH {
-            x = 0;
-            y += 1;
+        for tile in map.tiles.iter() {
+            let pt = Point { x, y };
+            if viewshed.visible_tiles.contains(&pt) {
+                match tile {
+                    TileType::Floor => {
+                        ctx.set(x, y, floor_fg, floor_bg, floor_glyph);
+                    }
+                    TileType::Wall => {
+                        ctx.set(x, y, wall_fg, wall_bg, wall_glyph);
+                    }
+                }
+            }
+
+            x += 1;
+            if x == MAP_WIDTH {
+                x = 0;
+                y += 1;
+            }
         }
     }
 }
