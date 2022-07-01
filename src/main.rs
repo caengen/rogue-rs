@@ -1,4 +1,4 @@
-use rltk::{GameState, Rltk, RGB};
+use rltk::{GameState, Point, Rltk, RGB};
 use specs::{prelude::*, World};
 use std::cmp::{max, min};
 mod components;
@@ -10,15 +10,21 @@ use map::*;
 mod rect;
 mod visibility_system;
 use visibility_system::*;
+mod monster_ai_system;
+use monster_ai_system::*;
 
 pub struct State {
     pub ecs: World,
+    pub runstate: RunState,
 }
 
 impl State {
     fn run_systems(&mut self) {
         let mut vis = VisibilitySystem {};
+        let mut monster = MonsterAI {};
+
         vis.run_now(&self.ecs);
+        monster.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -27,9 +33,17 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
 
-        player_input(self, ctx);
-        self.run_systems();
+        match self.runstate {
+            RunState::Running => {
+                self.run_systems();
+                self.runstate = RunState::Paused;
+            }
+            RunState::Paused => {
+                self.runstate = player_input(self, ctx);
+            }
+        }
 
+        // rendering
         let map = self.ecs.fetch::<Map>();
         draw_map(&self.ecs, ctx);
 
@@ -62,13 +76,18 @@ impl<'a> System<'a> for LeftWalker {
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let context = RltkBuilder::simple80x50().with_title("rogue-rs").build()?;
-    let mut gs = State { ecs: World::new() };
+    let mut gs = State {
+        ecs: World::new(),
+        runstate: RunState::Running,
+    };
 
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<LeftMover>();
     gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
+    gs.ecs.register::<Monster>();
+    gs.ecs.register::<Name>();
 
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -85,6 +104,9 @@ fn main() -> rltk::BError {
             bg: RGB::named(rltk::BLACK),
         })
         .with(Player {})
+        .with(Name {
+            name: "Player".to_string(),
+        })
         .with(Viewshed {
             visible_tiles: Vec::new(),
             range: 8,
@@ -93,13 +115,20 @@ fn main() -> rltk::BError {
         .build();
 
     let mut rng = rltk::RandomNumberGenerator::new();
-    for room in map.rooms.iter().skip(1) {
+    for (i, room) in map.rooms.iter().skip(1).enumerate() {
         let (x, y) = room.center();
         let glyph;
+        let name;
         let roll = rng.roll_dice(1, 2);
         match roll {
-            1 => glyph = rltk::to_cp437('g'),
-            _ => glyph = rltk::to_cp437('o'),
+            1 => {
+                glyph = rltk::to_cp437('g');
+                name = "Goblin".to_string();
+            }
+            _ => {
+                glyph = rltk::to_cp437('o');
+                name = "Orc".to_string();
+            }
         }
         gs.ecs
             .create_entity()
@@ -114,10 +143,15 @@ fn main() -> rltk::BError {
                 range: 8,
                 dirty: true,
             })
+            .with(Monster {})
+            .with(Name {
+                name: format!("{} #{}", name, i),
+            })
             .build();
     }
 
     gs.ecs.insert(map);
+    gs.ecs.insert(Point::new(player_x, player_y));
 
     rltk::main_loop(context, gs)
 }

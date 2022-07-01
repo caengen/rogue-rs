@@ -26,3 +26,17 @@ pub struct Viewshed {
     pub range: i32,
     pub dirty: bool,
 }
+
+#[derive(Component)]
+pub struct Monster {}
+
+#[derive(PartialEq, Copy, Clone)]
+pub enum RunState {
+    Paused,
+    Running,
+}
+
+#[derive(Component, Debug)]
+pub struct Name {
+    pub name: String,
+}
