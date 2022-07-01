@@ -114,39 +114,40 @@ impl Map {
 }
 
 pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
-    let mut viewsheds = ecs.write_storage::<Viewshed>();
-    let mut players = ecs.write_storage::<Player>();
     let map = ecs.fetch::<Map>();
 
     let floor_fg = RGB::from_f32(0.5, 0.5, 0.5);
-    let floor_bg = RGB::from_f32(0., 0., 0.);
     let floor_glyph = rltk::to_cp437('.');
     let wall_fg = RGB::from_f32(0., 1.0, 0.);
-    let wall_bg = RGB::from_f32(0.5, 0.5, 0.5);
     let wall_glyph = rltk::to_cp437('#');
 
-    for (_player, viewshed) in (&mut players, &mut viewsheds).join() {
-        let mut y = 0;
-        let mut x = 0;
+    let mut y = 0;
+    let mut x = 0;
 
-        for tile in map.tiles.iter() {
-            let pt = Point { x, y };
-            if viewshed.visible_tiles.contains(&pt) {
-                match tile {
-                    TileType::Floor => {
-                        ctx.set(x, y, floor_fg, floor_bg, floor_glyph);
-                    }
-                    TileType::Wall => {
-                        ctx.set(x, y, wall_fg, wall_bg, wall_glyph);
-                    }
+    for (idx, tile) in map.tiles.iter().enumerate() {
+        if map.revealed_tiles[idx] {
+            let glyph;
+            let mut fg;
+            match tile {
+                TileType::Floor => {
+                    glyph = floor_glyph;
+                    fg = floor_fg;
+                }
+                TileType::Wall => {
+                    glyph = wall_glyph;
+                    fg = wall_fg;
                 }
             }
-
-            x += 1;
-            if x == MAP_WIDTH {
-                x = 0;
-                y += 1;
+            if !map.visible_tiles[idx] {
+                fg = fg.to_greyscale();
             }
+            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
+        }
+
+        x += 1;
+        if x == MAP_WIDTH {
+            x = 0;
+            y += 1;
         }
     }
 }
