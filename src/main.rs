@@ -21,6 +21,8 @@ mod melee_combat_system;
 use melee_combat_system::*;
 mod gui;
 use gui::*;
+mod inventory_system;
+use inventory_system::*;
 
 use crate::spawner::spawn_room;
 mod gamelog;
@@ -37,12 +39,15 @@ impl State {
         let mut map_indexing = MapIndexingSystem {};
         let mut melee = MeleeCombatSystem {};
         let mut damage = DamageSystem {};
+        let mut pickup = ItemCollectionSystem {};
 
         vis.run_now(&self.ecs);
         monster.run_now(&self.ecs);
         map_indexing.run_now(&self.ecs);
         melee.run_now(&self.ecs);
         damage.run_now(&self.ecs);
+        pickup.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
@@ -115,6 +120,10 @@ fn main() -> rltk::BError {
     gs.ecs.register::<CombatStats>();
     gs.ecs.register::<WantsToMelee>();
     gs.ecs.register::<SufferDamage>();
+    gs.ecs.register::<Item>();
+    gs.ecs.register::<Potion>();
+    gs.ecs.register::<InBackpack>();
+    gs.ecs.register::<WantsToPickupItem>();
 
     gs.ecs.insert(RandomNumberGenerator::new());
     let map: Map = Map::new_map_rooms_and_corridors();
