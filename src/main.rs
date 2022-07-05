@@ -40,6 +40,7 @@ impl State {
         let mut melee = MeleeCombatSystem {};
         let mut damage = DamageSystem {};
         let mut pickup = ItemCollectionSystem {};
+        let mut potions = PotionUseSystem {};
 
         vis.run_now(&self.ecs);
         monster.run_now(&self.ecs);
@@ -47,6 +48,7 @@ impl State {
         melee.run_now(&self.ecs);
         damage.run_now(&self.ecs);
         pickup.run_now(&self.ecs);
+        potions.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -54,14 +56,19 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
+        // rendering
+        draw_map(&self.ecs, ctx);
+
         let mut newrunstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
             newrunstate = *runstate;
         }
+
         match newrunstate {
             RunState::PreRun => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::AwaitingInput;
             }
             RunState::AwaitingInput => {
@@ -69,10 +76,12 @@ impl GameState for State {
             }
             RunState::PlayerTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::MonsterTurn;
             }
             RunState::MonsterTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::AwaitingInput;
             }
             RunState::ShowInventory => {
@@ -82,13 +91,16 @@ impl GameState for State {
                     gui::ItemMenuResult::NoResponse => {}
                     gui::ItemMenuResult::Selected => {
                         let item_entity = result.1.unwrap();
-                        let names = self.ecs.read_storage::<Name>();
-                        let mut gamelog = self.ecs.fetch_mut::<gamelog::GameLog>();
-                        gamelog.entries.push(format!(
-                            "You try to use {}, but it isn't written yet",
-                            names.get(item_entity).unwrap().name
-                        ));
-                        newrunstate = RunState::AwaitingInput;
+                        let mut intent = self.ecs.write_storage::<WantsToDrinkPotion>();
+                        intent
+                            .insert(
+                                *self.ecs.fetch::<Entity>(),
+                                WantsToDrinkPotion {
+                                    potion: item_entity,
+                                },
+                            )
+                            .expect("Unable to insert intent");
+                        newrunstate = RunState::PlayerTurn;
                     }
                 }
             }
@@ -100,9 +112,6 @@ impl GameState for State {
         }
 
         delete_the_dead(&mut self.ecs);
-
-        // rendering
-        draw_map(&self.ecs, ctx);
 
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
@@ -141,6 +150,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Potion>();
     gs.ecs.register::<InBackpack>();
     gs.ecs.register::<WantsToPickupItem>();
+    gs.ecs.register::<WantsToDrinkPotion>();
 
     gs.ecs.insert(RandomNumberGenerator::new());
     let map: Map = Map::new_map_rooms_and_corridors();
