@@ -1,7 +1,7 @@
 # rogue-rs
-🚧  roguelike 
-
 Roguelike with Rust, Rltk and Specs. 
+
+![Demo](https://github.com/caengen/rogue-rs/blob/master/demo/demo.gif)
 
 [Source](https://bfnightly.bracketproductions.com/)
 
