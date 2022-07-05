@@ -14,3 +14,4 @@ Roguelike with Rust, Rltk and Specs.
 | Down/Numpad2/J  | Move down |
 | G | Pick up item |
 | I | Open inventory |
+| D | Open drop items menu |
