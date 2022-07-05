@@ -3,7 +3,7 @@ Roguelike with Rust, Rltk and Specs.
 
 ![Demo](https://github.com/caengen/rogue-rs/blob/master/demo/demo.gif)
 
-[Source](https://bfnightly.bracketproductions.com/)
+Based on tutorial@[bracketproductions](https://bfnightly.bracketproductions.com/)
 
 ### Keybindings
 | Key | Action |
